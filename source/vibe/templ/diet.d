@@ -605,10 +605,10 @@ private struct DietCompiler(TRANSLATE...)
 						output.pushNode("<![endif]-->");
 						break;
 					case "block": // Block insertion place
-						assertp(next_indent_level <= level, "Child elements for 'include' are not supported.");
 						output.pushDummyNode();
 						auto block = getBlock(ln[6 .. $].ctstrip());
 						if( block ){
+						    assertp(next_indent_level <= level || block.mode == 0, "Appending/Prepending to default blocks not supported at this time.");
 							output.writeString("<!-- using block " ~ ln[6 .. $] ~ " in " ~ curline.file ~ "-->");
 							if( block.mode == 1 ){
 								// output defaults
@@ -621,9 +621,19 @@ private struct DietCompiler(TRANSLATE...)
 							if( block.mode == -1 ){
 								// output defaults
 							}
+
+							// Skip defaults since we found a block
+							// TODO: instead implement it with support for append and prepend
+							++m_lineIndex;
+							while( m_lineIndex < lineCount &&
+							        indentLevel(line(m_lineIndex).text, indentStyle, false) - start_indent_level > level-base_level )
+							    ++m_lineIndex;
+							--m_lineIndex;
+							next_indent_level = computeNextIndentLevel();
 						} else {
 							// output defaults
 							output.writeString("<!-- Default block " ~ ln[6 .. $] ~ " in " ~ curline.file ~ "-->");
+							// The defaults (children of the block node) will continue to be processed.
 						}
 						break;
 					case "include": // Diet file include
